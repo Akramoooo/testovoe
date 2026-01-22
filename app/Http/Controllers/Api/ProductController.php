@@ -6,15 +6,19 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreProductRequest;
 use App\Http\Resources\ProductResource;
 use App\Models\Product;
+use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $query = Product::with('category');
 
-        $products = Product::with('category')->latest()->paginate(10);
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
 
-        return ProductResource::collection($products);
+        return response()->json($query->paginate(12));
     }
 
     public function store(StoreProductRequest $request)
@@ -24,9 +28,15 @@ class ProductController extends Controller
         return new ProductResource($product->load('category'));
     }
 
-    public function show(Product $product)
+    public function show($id)
     {
-        return new ProductResource($product->load('category'));
+        $product = Product::with('category')->find($id);
+
+        if (! $product) {
+            return response()->json(['message' => 'Not found'], 404);
+        }
+
+        return new ProductResource($product);
     }
 
     public function update(StoreProductRequest $request, Product $product)
@@ -40,6 +50,6 @@ class ProductController extends Controller
     {
         $product->delete();
 
-        return response()->json(['message' => 'Товар удален'], 204);
+        return response()->json(null, 204);
     }
 }
